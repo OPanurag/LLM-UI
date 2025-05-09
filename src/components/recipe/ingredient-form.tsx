@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 const formSchema = z.object({
   ingredients: z.string().min(3, { message: "Please list at least one ingredient." }),
   maxCalories: z.coerce.number().min(1, { message: "Max calories must be a positive number." }).max(5000, { message: "Max calories seem too high." }),
+  dietaryRestrictions: z.string().optional(),
 });
 
 type IngredientFormProps = {
@@ -28,11 +29,12 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
     defaultValues: {
       ingredients: "",
       maxCalories: 500,
+      dietaryRestrictions: "",
     },
   });
 
   const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
-    await onSubmit(values);
+    await onSubmit(values as SuggestRecipeInput); // Cast to SuggestRecipeInput to include dietaryRestrictions
   };
 
   return (
@@ -80,6 +82,25 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
                     />
                   </FormControl>
                   <FormMessage id="maxCalories-message" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dietaryRestrictions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="dietaryRestrictions-input" className="text-base">Dietary Restrictions (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      id="dietaryRestrictions-input"
+                      placeholder="e.g., vegan, gluten-free, low-carb"
+                      className="text-base"
+                      {...field}
+                      aria-describedby="dietaryRestrictions-message"
+                    />
+                  </FormControl>
+                  <FormMessage id="dietaryRestrictions-message" />
                 </FormItem>
               )}
             />

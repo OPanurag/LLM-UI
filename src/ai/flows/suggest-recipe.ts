@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A recipe suggestion AI agent that suggests recipes based on ingredients and calorie count.
+ * @fileOverview A recipe suggestion AI agent that suggests recipes based on ingredients, calorie count, and dietary restrictions.
  *
  * - suggestRecipe - A function that handles the recipe suggestion process.
  * - SuggestRecipeInput - The input type for the suggestRecipe function.
@@ -19,6 +19,10 @@ const SuggestRecipeInputSchema = z.object({
   maxCalories: z
     .number()
     .describe('The maximum number of calories the recipe should contain.'),
+  dietaryRestrictions: z
+    .string()
+    .optional()
+    .describe('Any dietary restrictions, e.g., vegan, gluten-free, low-carb.'),
 });
 export type SuggestRecipeInput = z.infer<typeof SuggestRecipeInputSchema>;
 
@@ -38,12 +42,16 @@ const prompt = ai.definePrompt({
   name: 'suggestRecipePrompt',
   input: {schema: SuggestRecipeInputSchema},
   output: {schema: SuggestRecipeOutputSchema},
-  prompt: `You are a recipe suggestion bot. A user will provide you with a list of ingredients they have, and a maximum calorie count for the recipe.
+  prompt: `You are a recipe suggestion bot. A user will provide you with a list of ingredients they have, a maximum calorie count for the recipe{{#if dietaryRestrictions}}, and specific dietary restrictions{{/if}}.
 
-You will respond with a recipe using those ingredients that stays within the calorie limit. The recipe should include a name, a list of ingredients (including quantities), step-by-step instructions, and the total calorie count.
+You will respond with a recipe using those ingredients that stays within the calorie limit{{#if dietaryRestrictions}} and adheres to the following dietary restrictions: {{{dietaryRestrictions}}}{{/if}}.
+The recipe should include a name, a list of ingredients (including quantities), step-by-step instructions, and the total calorie count.
 
 Ingredients: {{{ingredients}}}
 Maximum Calories: {{{maxCalories}}}
+{{#if dietaryRestrictions}}
+Dietary Restrictions: {{{dietaryRestrictions}}}
+{{/if}}
 `,
 });
 
