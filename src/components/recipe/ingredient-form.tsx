@@ -13,8 +13,8 @@ import type { SuggestRecipeInput } from '@/ai/flows/suggest-recipe';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  ingredients: z.string().min(3, { message: "Please list at least one ingredient." }),
-  maxCalories: z.coerce.number().min(1, { message: "Max calories must be a positive number." }).max(5000, { message: "Max calories seem too high." }),
+  ingredients: z.string().optional(),
+  maxCalories: z.coerce.number().positive({ message: "Calories must be a positive number if provided." }).max(5000, { message: "Max calories seem too high." }).optional().or(z.literal('')),
   dietaryRestrictions: z.string().optional(),
 });
 
@@ -28,20 +28,30 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ingredients: "",
-      maxCalories: 500,
+      maxCalories: undefined, // Set to undefined so placeholder shows
       dietaryRestrictions: "",
     },
   });
 
   const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
-    await onSubmit(values as SuggestRecipeInput); // Cast to SuggestRecipeInput to include dietaryRestrictions
+    const submitValues: SuggestRecipeInput = {};
+    if (values.ingredients && values.ingredients.trim() !== "") {
+      submitValues.ingredients = values.ingredients.trim();
+    }
+    if (values.maxCalories && values.maxCalories !== '') {
+      submitValues.maxCalories = Number(values.maxCalories);
+    }
+    if (values.dietaryRestrictions && values.dietaryRestrictions.trim() !== "") {
+      submitValues.dietaryRestrictions = values.dietaryRestrictions.trim();
+    }
+    await onSubmit(submitValues);
   };
 
   return (
     <Card className="w-full shadow-lg rounded-xl">
       <CardHeader>
-        <CardTitle className="text-2xl">Create Your Recipe</CardTitle>
-        <CardDescription>Tell us what ingredients you have and your calorie goal.</CardDescription>
+        <CardTitle className="text-2xl">Discover Your Next Meal</CardTitle>
+        <CardDescription>Provide any details below, or leave them blank for a surprise recipe!</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -51,7 +61,7 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
               name="ingredients"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="ingredients-input" className="text-base">Available Ingredients</FormLabel>
+                  <FormLabel htmlFor="ingredients-input" className="text-base">Available Ingredients (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
                       id="ingredients-input"
@@ -70,7 +80,7 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
               name="maxCalories"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="maxCalories-input" className="text-base">Maximum Calories</FormLabel>
+                  <FormLabel htmlFor="maxCalories-input" className="text-base">Maximum Calories (Optional)</FormLabel>
                   <FormControl>
                     <Input
                       id="maxCalories-input"
@@ -78,6 +88,15 @@ const IngredientForm: FC<IngredientFormProps> = ({ onSubmit, isLoading }) => {
                       placeholder="e.g., 500"
                       className="text-base"
                       {...field}
+                      onChange={(e) => {
+                        if (e.target.value === "") {
+                          field.onChange(""); // Allow empty string for optional field
+                        } else {
+                          const numValue = parseInt(e.target.value, 10);
+                          field.onChange(isNaN(numValue) ? "" : numValue);
+                        }
+                      }}
+                      value={field.value === undefined || field.value === null ? "" : field.value}
                       aria-describedby="maxCalories-message"
                     />
                   </FormControl>

@@ -15,9 +15,11 @@ import {z} from 'genkit';
 const SuggestRecipeInputSchema = z.object({
   ingredients: z
     .string()
+    .optional()
     .describe('A comma-separated list of ingredients available to use in the recipe.'),
   maxCalories: z
     .number()
+    .optional()
     .describe('The maximum number of calories the recipe should contain.'),
   dietaryRestrictions: z
     .string()
@@ -30,7 +32,7 @@ const SuggestRecipeOutputSchema = z.object({
   recipeName: z.string().describe('The name of the suggested recipe.'),
   ingredients: z.string().describe('A list of ingredients required for the recipe, including quantities.'),
   instructions: z.string().describe('Step-by-step instructions for preparing the recipe.'),
-  totalCalories: z.number().describe('The total calorie count of the recipe.'),
+  totalCalories: z.number().describe('The total calorie count of the recipe. If maxCalories was not provided, estimate this value.'),
 });
 export type SuggestRecipeOutput = z.infer<typeof SuggestRecipeOutputSchema>;
 
@@ -42,16 +44,28 @@ const prompt = ai.definePrompt({
   name: 'suggestRecipePrompt',
   input: {schema: SuggestRecipeInputSchema},
   output: {schema: SuggestRecipeOutputSchema},
-  prompt: `You are a recipe suggestion bot. A user will provide you with a list of ingredients they have, a maximum calorie count for the recipe{{#if dietaryRestrictions}}, and specific dietary restrictions{{/if}}.
+  prompt: `You are a recipe suggestion bot. A user may provide you with a list of ingredients they have, a maximum calorie count for the recipe, and specific dietary restrictions.
 
-You will respond with a recipe using those ingredients that stays within the calorie limit{{#if dietaryRestrictions}} and adheres to the following dietary restrictions: {{{dietaryRestrictions}}}{{/if}}.
-The recipe should include a name, a list of ingredients (including quantities), step-by-step instructions, and the total calorie count.
-
-Ingredients: {{{ingredients}}}
-Maximum Calories: {{{maxCalories}}}
-{{#if dietaryRestrictions}}
-Dietary Restrictions: {{{dietaryRestrictions}}}
+You will respond with a recipe.
+{{#if ingredients}}
+The recipe should try to use these ingredients: {{{ingredients}}}.
+{{else}}
+The recipe can use any common ingredients.
 {{/if}}
+
+{{#if maxCalories}}
+The recipe should stay within this calorie limit: {{{maxCalories}}} calories.
+{{else}}
+Suggest a recipe with a reasonable calorie count (e.g., 300-700 calories for a main meal).
+{{/if}}
+
+{{#if dietaryRestrictions}}
+The recipe must adhere to the following dietary restrictions: {{{dietaryRestrictions}}}.
+{{/if}}
+
+The recipe should include a name, a list of ingredients (including quantities), step-by-step instructions, and the total calorie count.
+If no maximum calorie count was provided, please estimate the total calories for the suggested recipe.
+If no ingredients are provided, suggest a popular and relatively simple recipe.
 `,
 });
 
@@ -66,3 +80,4 @@ const suggestRecipeFlow = ai.defineFlow(
     return output!;
   }
 );
+
