@@ -8,7 +8,7 @@ const geistSans = GeistSans;
 // const geistMono = GeistMono; // Removed due to import error
 
 export const metadata: Metadata = {
-  title: 'Green Recipe Genie',
+  title: 'Recipe Genie',
   description: 'AI-powered recipe suggestions based on your ingredients and calorie needs.',
 };
 
