@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A recipe suggestion AI agent that suggests recipes based on ingredients, calorie count, and dietary restrictions.
+ * @fileOverview A recipe suggestion AI chatbot that suggests recipes based on natural language user queries.
  *
  * - suggestRecipe - A function that handles the recipe suggestion process.
  * - SuggestRecipeInput - The input type for the suggestRecipe function.
@@ -13,26 +13,19 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestRecipeInputSchema = z.object({
-  ingredients: z
+  userQuery: z
     .string()
-    .optional()
-    .describe('A comma-separated list of ingredients available to use in the recipe.'),
-  maxCalories: z
-    .number()
-    .optional()
-    .describe('The maximum number of calories the recipe should contain.'),
-  dietaryRestrictions: z
-    .string()
-    .optional()
-    .describe('Any dietary restrictions, e.g., vegan, gluten-free, low-carb.'),
+    .describe("The user's natural language message or query to the chatbot regarding recipe suggestions."),
 });
 export type SuggestRecipeInput = z.infer<typeof SuggestRecipeInputSchema>;
 
 const SuggestRecipeOutputSchema = z.object({
   recipeName: z.string().describe('The name of the suggested recipe.'),
-  ingredients: z.string().describe('A list of ingredients required for the recipe, including quantities.'),
-  instructions: z.string().describe('Step-by-step instructions for preparing the recipe.'),
-  totalCalories: z.number().describe('The total calorie count of the recipe. If maxCalories was not provided, estimate this value.'),
+  ingredients: z.string().describe('A list of ingredients required for the recipe, including quantities. Should be formatted nicely, e.g., as a bulleted list.'),
+  instructions: z.string().describe('Step-by-step instructions for preparing the recipe. Should be formatted nicely, e.g., as a numbered list.'),
+  totalCalories: z.number().describe('The total calorie count of the recipe. If maxCalories was not provided by the user, estimate this value.'),
+  // An optional field for the bot to provide a friendly message if no recipe is found or query is unclear.
+  botMessage: z.string().optional().describe("A friendly message from the bot, e.g., if no recipe could be found or if the query was unclear.")
 });
 export type SuggestRecipeOutput = z.infer<typeof SuggestRecipeOutputSchema>;
 
@@ -41,31 +34,32 @@ export async function suggestRecipe(input: SuggestRecipeInput): Promise<SuggestR
 }
 
 const prompt = ai.definePrompt({
-  name: 'suggestRecipePrompt',
+  name: 'suggestRecipeChatPrompt',
   input: {schema: SuggestRecipeInputSchema},
   output: {schema: SuggestRecipeOutputSchema},
-  prompt: `You are a recipe suggestion bot. A user may provide you with a list of ingredients they have, a maximum calorie count for the recipe, and specific dietary restrictions.
+  prompt: `You are "Green Recipe Genie", a friendly and helpful chatbot that suggests recipes.
+The user has sent the following message: "{{{userQuery}}}"
 
-You will respond with a recipe.
-{{#if ingredients}}
-The recipe should try to use these ingredients: {{{ingredients}}}.
-{{else}}
-The recipe can use any common ingredients.
-{{/if}}
+Analyze the user's message to understand their needs. Extract any mentioned:
+1. Ingredients they have or want to use.
+2. Maximum calorie count (if specified, the recipe should be within this limit).
+3. Dietary restrictions (e.g., vegan, gluten-free, low-carb).
 
-{{#if maxCalories}}
-The recipe should stay within this calorie limit: {{{maxCalories}}} calories.
-{{else}}
-Suggest a recipe with a reasonable calorie count (e.g., 300-700 calories for a main meal).
-{{/if}}
+Based on this information, suggest a suitable recipe.
+- If specific ingredients are mentioned, try to use them.
+- If a maximum calorie count is given, ensure the recipe is within that limit. If not specified by the user, suggest a recipe with a reasonable calorie count (e.g., 300-700 calories for a main meal) and state the estimated total calories.
+- If dietary restrictions are mentioned, the recipe must adhere to them.
+- If the user's query is vague (e.g., "I'm hungry", "suggest a recipe") or does not provide enough specific information for a tailored recipe, suggest a popular, relatively simple recipe that is generally appealing. For example, if they say "I want something vegetarian", pick a popular vegetarian dish.
 
-{{#if dietaryRestrictions}}
-The recipe must adhere to the following dietary restrictions: {{{dietaryRestrictions}}}.
-{{/if}}
+Your response MUST include:
+- recipeName: The name of the suggested recipe.
+- ingredients: A list of ingredients required for the recipe, including quantities. Format this as a bulleted list (e.g., using '-' or '*').
+- instructions: Step-by-step instructions for preparing the recipe. Format this as a numbered list.
+- totalCalories: The estimated total calorie count of the recipe.
 
-The recipe should include a name, a list of ingredients (including quantities), step-by-step instructions, and the total calorie count.
-If no maximum calorie count was provided, please estimate the total calories for the suggested recipe.
-If no ingredients are provided, suggest a popular and relatively simple recipe.
+If you cannot reasonably interpret the query as a recipe request, or if the query is completely unrelated to food or recipes, OR if you cannot find a suitable recipe based on very restrictive or conflicting constraints, set the 'botMessage' field with a polite message explaining this. In such cases, you can provide placeholder values for recipeName (e.g., "No Recipe Found"), ingredients ("N/A"), instructions ("N/A"), and totalCalories (0). Do not try to make up a recipe if the request is impossible or nonsensical.
+Example of handling an unclear query: If user says "hello", botMessage could be "Hello! I'm Green Recipe Genie. How can I help you find a recipe today?", and other fields can be placeholders.
+Example of handling a non-recipe query: If user asks "what's the weather?", botMessage could be "I can only help with recipe suggestions. Is there a recipe I can find for you?", and other fields can be placeholders.
 `,
 });
 
@@ -77,7 +71,13 @@ const suggestRecipeFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    // Ensure output is not null, providing a fallback if necessary, though the prompt aims to always return a structured response.
+    return output || {
+        recipeName: "Error",
+        ingredients: "Could not process request.",
+        instructions: "Please try again.",
+        totalCalories: 0,
+        botMessage: "Sorry, an unexpected error occurred while trying to generate a recipe.",
+    };
   }
 );
-
