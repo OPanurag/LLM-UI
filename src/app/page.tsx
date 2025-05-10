@@ -12,7 +12,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
-  const initialBotGreeting = "Hello! I'm Green Recipe Genie. What kind of recipe are you looking for today?";
+  const initialBotGreeting = "Hello! I'm your Recipe Genie. What kind of recipe are you looking for today?";
 
  useEffect(() => {
     // Add initial bot greeting if no messages exist
@@ -93,7 +93,7 @@ export default function HomePage() {
         />
       </main>
       <footer className="py-4 text-center text-muted-foreground text-xs border-t border-border/50">
-        <p>&copy; {new Date().getFullYear()} Green Recipe Genie. Chat with AI for recipes.</p>
+        <p>&copy; {new Date().getFullYear()} Recipe Genie. Chat with AI for recipes.</p>
       </footer>
     </div>
   );
