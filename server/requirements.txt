@@ -1,8 +1,0 @@
-Flask
-transformers[sentencepiece] # sentencepiece is often needed for tokenizers like Llama's
-torch
-accelerate
-peft
-bitsandbytes # Recommended if using 4-bit/8-bit quantization, or for some LoRA setups
-# Werkzeug is a Flask dependency, usually installed automatically.
-# Pin versions if necessary for stability, e.g., Flask==2.3.0
