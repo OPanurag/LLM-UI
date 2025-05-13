@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import traceback # For detailed error logging
+from accelerate import Accelerator
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +15,7 @@ app = Flask(__name__)
 
 # --- Model Loading ---
 try:
+    accelerator = Accelerator()
     base_model_path = os.environ.get("MODEL_BASE_PATH", "/home/anurag_mishra/models/base_model") # Default path for Docker
     lora_model_path = os.environ.get("LORA_MODEL_PATH", "/home/anurag_mishra/models/recipe_model_lora_full/final_adapter") # Default path for Docker
     
@@ -26,7 +28,7 @@ try:
     app.logger.info(f"Attempting to load base model from: {base_model_path}")
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_path, 
-        device_map="auto", 
+        # device_map="auto", 
         torch_dtype=torch.float16 # Using float16 for efficiency
     )
     app.logger.info("Base model loaded successfully.")
@@ -219,9 +221,11 @@ Response:
 """
         app.logger.info("Constructed structured prompt for the model.")
 
-        inputs = tokenizer(structured_prompt, return_tensors="pt").to(lora_model.device)
-        input_ids = inputs['input_ids']
-        attention_mask = inputs.get('attention_mask')
+        inputs = tokenizer(structured_prompt, return_tensors="pt")
+        inputs = accelerator.prepare(inputs)
+        input_ids = inputs['input_ids'].to(accelerator.device)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(lora_model.device)
 
         with torch.no_grad():
             generation_args = {
