@@ -14,8 +14,8 @@ app = Flask(__name__)
 
 # --- Model Loading ---
 try:
-    base_model_path = os.environ.get("MODEL_BASE_PATH", "/models/base_model") # Default path for Docker
-    lora_model_path = os.environ.get("LORA_MODEL_PATH", "/models/recipe_model_lora_full/final_adapter") # Default path for Docker
+    base_model_path = os.environ.get("MODEL_BASE_PATH", "/home/anurag_mishra/models/base_model") # Default path for Docker
+    lora_model_path = os.environ.get("LORA_MODEL_PATH", "/home/anurag_mishra/models/recipe_model_lora_full/final_adapter") # Default path for Docker
     
     app.logger.info(f"Attempting to load tokenizer from: {base_model_path}")
     tokenizer = AutoTokenizer.from_pretrained(base_model_path)
